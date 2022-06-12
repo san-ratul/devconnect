@@ -24,7 +24,62 @@ router.get('/', passport.authenticate('jwt', { session: false }), (req, res) => 
             }
             return res.json(profile);
         })
-        .catch(err => res.status(404).json(err))
+        .catch(err => res.status(404).json(err));
+});
+
+/*
+* @Route    GET api/profile/all
+* @desc     Get all users profile
+* @access   public
+*/
+router.get('/all', (req, res) => {
+    const errors = {}
+    Profile.find()
+        .populate('user', ['name', 'avatar'])
+        .then(profiles => {
+            if (!profiles) {
+                errors.noProfile = "No profiles found"
+                return res.status(404).json(errors);
+            }
+            return res.json(profiles);
+        })
+        .catch(err => res.status(404).json({noProfile : "There are no profiles"}));
+});
+
+/*
+* @Route    GET api/profile/handle/:handle
+* @desc     Get profile by handle
+* @access   public
+*/
+router.get('/handle/:handle', (req, res) => {
+    Profile.findOne({ handle: req.params.handle })
+    .populate('user', ['name', 'avatar'])
+    .then(profile => {
+        if (!profile) {
+            errors.noProfile = "There is no profile for this user"
+            return res.status(404).json(errors);
+        }
+        return res.json(profile);
+    })
+    .catch(err => res.status(404).json({noProfile : "There is no profile for this handle."}))
+});
+
+/*
+* @Route    GET api/profile/user/:user_id
+* @desc     Get profile by user ID
+* @access   public
+*/
+router.get('/user/:user_id', (req, res) => {
+    Profile.findOne({ user : req.params.user_id })
+    .populate('user', ['name', 'avatar'])
+    .then(profile => {
+        if (!profile) {
+            errors.noProfile = "There is no profile for this user"
+            return res.status(404).json(errors);
+        }
+        return res.json(profile);
+    })
+    .catch(err => res.status(404).json({noProfile : "There is no profile for this user."}));
 });
 
 /*
