@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const passport = require('passport');
-
+const validateProfileInput = require('../../validation/profile');
 // Load Profile Model
 const Profile = require('../../model/Profile');
 // Load User Model
@@ -16,6 +16,7 @@ const User = require('../../model/User');
 router.get('/', passport.authenticate('jwt', { session: false }), (req, res) => {
     const errors = {}
     Profile.findOne({ user: req.user.id })
+        .populate('user', ['name', 'avatar'])
         .then(profile => {
             if (!profile) {
                 errors.noProfile = "There is no profile for this user"
@@ -31,7 +32,14 @@ router.get('/', passport.authenticate('jwt', { session: false }), (req, res) => 
 * @desc     Create current users profile
 * @access   private
 */
-router.get('/', passport.authenticate('jwt', { session: false }), (req, res) => {
+router.post('/', passport.authenticate('jwt', { session: false }), (req, res) => {
+
+    const { errors, isValid } = validateProfileInput(req.body);
+
+    //check Validation
+    if (!isValid) {
+        return res.status(400).json(errors);
+    }
     //get fields
     const profileFields = {
         user: req.user.id,
@@ -45,16 +53,16 @@ router.get('/', passport.authenticate('jwt', { session: false }), (req, res) => 
     if (req.body.github_username) profileFields.github_username = req.body.github_username;
     // Skills - split into array
     if (typeof req.body.skills !== 'undefined') {
-        profileFields.skills = req.body.skills.spit(',');
+        profileFields.skills = req.body.skills.split(',');
     }
     //Social 
     profileFields.social = {};
 
-    if (req.body.youtube) profileFields.social.youtube = req.body.social.youtube;
-    if (req.body.twitter) profileFields.social.twitter = req.body.social.twitter;
-    if (req.body.facebook) profileFields.social.facebook = req.body.social.facebook;
-    if (req.body.linkedin) profileFields.social.linkedin = req.body.social.linkedin;
-    if (req.body.instagram) profileFields.social.instagram = req.body.social.instagram;
+    if (req.body.youtube) profileFields.social.youtube = req.body.youtube;
+    if (req.body.twitter) profileFields.social.twitter = req.body.twitter;
+    if (req.body.facebook) profileFields.social.facebook = req.body.facebook;
+    if (req.body.linkedin) profileFields.social.linkedin = req.body.linkedin;
+    if (req.body.instagram) profileFields.social.instagram = req.body.instagram;
 
     Profile.findOne({ user: req.user.id })
         .then(profile => {
@@ -65,13 +73,13 @@ router.get('/', passport.authenticate('jwt', { session: false }), (req, res) => 
                     { $set: profileFields },
                     { new: true }
                 )
-                .then(profile => res.json(profile));
+                    .then(profile => res.json(profile));
             } else {
                 // Create
 
                 // Check if handle/slug exists
                 Profile.findOne({ handle: profileFields.handle }).then(profile => {
-                    if(profile){
+                    if (profile) {
                         errors.handle = "That handle already exists";
                         return res.status(400).json(errors);
                     }
